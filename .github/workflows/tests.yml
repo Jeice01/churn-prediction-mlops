@@ -1,0 +1,27 @@
+name: Testes Python
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Configurar Python
+        run: uv python install 3.11
+
+      - name: Instalar dependencias
+        run: uv sync --locked
+
+      - name: Executar testes
+        run: uv run python -m pytest tests/ -v
