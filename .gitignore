@@ -1,0 +1,31 @@
+# Ambientes virtuais
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Variáveis de ambiente e credenciais
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Arquivos locais
+.DS_Store
+.vscode/
+
+# Artefatos de Machine Learning
+mlruns/
+mlartifacts/
+models/
+*.pkl
+*.joblib
+
+# Dados locais
+data/raw/
+data/processed/
