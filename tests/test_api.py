@@ -77,3 +77,12 @@ def test_predict_retorna_previsao():
     assert 0 <= resultado["probabilidade_churn"] <= 1
     assert resultado["threshold"] == 0.1656
     assert resultado["churn"] is True
+    with TestClient(app) as client:
+        metricas_antes = client.get("/metrics").json()
+        client.post("/predict", json=cliente)
+        metricas_depois = client.get("/metrics").json()
+
+    total_antes = metricas_antes["previsoes"].get("churn", 0)
+    total_depois = metricas_depois["previsoes"].get("churn", 0)
+
+    assert total_depois == total_antes + 1
