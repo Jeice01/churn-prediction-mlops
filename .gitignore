@@ -37,3 +37,6 @@ mlflow.db-wal
 
 # Artefatos locais para implantacao
 /deployment/model/
+
+# Pacotes locais do modelo
+/churn-model-*.tar.gz

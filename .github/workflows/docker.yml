@@ -1,0 +1,36 @@
+name: Docker Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      - name: Baixar modelo do GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.1.0 \
+            --repo "${{ github.repository }}" \
+            --pattern "churn-model-v0.1.0.tar.gz"
+
+      - name: Verificar integridade do modelo
+        run: |
+          echo "19d513b7c3ad80ca4de7b68f27e9f30083577fa220056faf0975e892e8ffe0b1  churn-model-v0.1.0.tar.gz" | sha256sum -c -
+
+      - name: Extrair modelo
+        run: |
+          mkdir -p deployment/model
+          tar -xzf churn-model-v0.1.0.tar.gz -C deployment/model
+
+      - name: Construir imagem Docker
+        run: |
+          docker build -t churn-prediction-api:0.1.0 .
