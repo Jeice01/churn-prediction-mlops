@@ -40,3 +40,7 @@ mlflow.db-wal
 
 # Pacotes locais do modelo
 /churn-model-*.tar.gz
+
+# Arquivos locais
+README.backup.md
+google-cloud-cli-*.tar.gz
