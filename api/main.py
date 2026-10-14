@@ -9,6 +9,7 @@ import pandas as pd
 from fastapi import FastAPI, Header, HTTPException, Request
 from starlette.background import BackgroundTasks
 
+from api.database.queries import consultar_indicadores_historicos
 from api.database.repository import salvar_metrica
 from api.model import carregar_modelo
 from api.monitoring.metrics import metricas
@@ -25,7 +26,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Churn Prediction API",
     description="API para previsao de cancelamento de clientes.",
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 
@@ -125,21 +126,4 @@ def consultar_metricas(
             detail="Acesso não autorizado.",
         )
 
-    return metricas.obter_metricas()
-
-def test_middleware_registra_metrica_persistente():
-    with patch("api.main.salvar_metrica") as salvar_mock:
-        with TestClient(app) as client:
-            resposta = client.get("/health")
-
-    assert resposta.status_code == 200
-
-    salvar_mock.assert_called_once()
-
-    argumentos = salvar_mock.call_args.kwargs
-
-    assert argumentos["endpoint"] == "/health"
-    assert argumentos["metodo_http"] == "GET"
-    assert argumentos["status_http"] == 200
-    assert argumentos["tempo_resposta_ms"] >= 0
-    assert argumentos["previsao_churn"] is None
+    return consultar_indicadores_historicos()

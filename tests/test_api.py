@@ -92,27 +92,3 @@ def test_predict_retorna_previsao():
     assert 0 <= resultado["probabilidade_churn"] <= 1
     assert resultado["threshold"] == 0.1656
     assert resultado["churn"] is True
-
-    # Verifica se a previsao continua sendo contabilizada
-    # nas metricas em memoria.
-    with patch("api.main.salvar_metrica"):
-        with patch.dict(environ, {"METRICS_API_KEY": "chave-teste"}):
-            with TestClient(app) as client:
-                headers = {"X-API-Key": "chave-teste"}
-
-                metricas_antes = client.get(
-                    "/metrics",
-                    headers=headers,
-                ).json()
-
-                client.post("/predict", json=cliente)
-
-                metricas_depois = client.get(
-                    "/metrics",
-                    headers=headers,
-                ).json()
-
-    total_antes = metricas_antes["previsoes"].get("churn", 0)
-    total_depois = metricas_depois["previsoes"].get("churn", 0)
-
-    assert total_depois == total_antes + 1

@@ -15,38 +15,55 @@ def simular_carregamento_modelo():
 
 
 def test_metrics_retorna_indicadores():
-    with patch.dict("os.environ", {"METRICS_API_KEY": "chave-teste"}):
-        with TestClient(app) as client:
-            response = client.get(
-                "/metrics",
-                headers={"X-API-Key": "chave-teste"},
-            )
+    indicadores = {
+        "total_requisicoes": 61,
+        "total_erros_http": 18,
+        "tempo_medio_ms": 20.48,
+        "total_previsoes": 5,
+        "total_churn_previsto": 5,
+    }
+
+    with patch(
+        "api.main.consultar_indicadores_historicos",
+        return_value=indicadores,
+    ) as consulta_mock:
+        with patch.dict("os.environ", {"METRICS_API_KEY": "chave-teste"}):
+            with TestClient(app) as client:
+                response = client.get(
+                    "/metrics",
+                    headers={"X-API-Key": "chave-teste"},
+                )
 
     assert response.status_code == 200
+    assert response.json() == indicadores
+    consulta_mock.assert_called_once()
 
-    dados = response.json()
 
-    assert "total_requisicoes" in dados
-    assert "total_erros" in dados
-    assert "tempo_medio_resposta_ms" in dados
-    assert "previsoes" in dados
+def test_metrics_consulta_historico():
+    indicadores = {
+        "total_requisicoes": 100,
+        "total_erros_http": 10,
+        "tempo_medio_ms": 25.5,
+        "total_previsoes": 30,
+        "total_churn_previsto": 12,
+    }
 
-def test_metrics_contabiliza_requisicoes():
-    with patch.dict("os.environ", {"METRICS_API_KEY": "chave-teste"}):
-        with TestClient(app) as client:
-            headers = {"X-API-Key": "chave-teste"}
+    with patch(
+        "api.main.consultar_indicadores_historicos",
+        return_value=indicadores,
+    ) as consulta_mock:
+        with patch.dict("os.environ", {"METRICS_API_KEY": "chave-teste"}):
+            with TestClient(app) as client:
+                resposta = client.get(
+                    "/metrics",
+                    headers={"X-API-Key": "chave-teste"},
+                )
 
-            antes = client.get(
-                "/metrics", headers=headers
-            ).json()["total_requisicoes"]
+    assert resposta.status_code == 200
+    assert resposta.json()["total_requisicoes"] == 100
+    assert resposta.json()["total_previsoes"] == 30
+    consulta_mock.assert_called_once()
 
-            client.get("/health")
-
-            depois = client.get(
-                "/metrics", headers=headers
-            ).json()["total_requisicoes"]
-
-    assert depois > antes
 
 from api.monitoring.metrics import MetricasAPI
 
