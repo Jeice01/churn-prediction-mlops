@@ -1,9 +1,17 @@
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
 from api.main import app
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def simular_carregamento_modelo():
+    with patch("api.main.carregar_modelo", return_value=MagicMock()):
+        yield
 
 
 def test_metrics_retorna_indicadores():
