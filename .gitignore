@@ -22,10 +22,15 @@ __pycache__/
 # Artefatos de Machine Learning
 mlruns/
 mlartifacts/
-models/
+/models/
 *.pkl
 *.joblib
 
 # Dados locais
 data/raw/
 data/processed/
+
+# Banco de dados local do MLflow
+mlflow.db
+mlflow.db-shm
+mlflow.db-wal
