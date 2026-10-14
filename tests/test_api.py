@@ -1,15 +1,13 @@
 """Testes automatizados da API de churn."""
 
-from unittest.mock import MagicMock, patch
 from os import environ
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-
 from fastapi.testclient import TestClient
 
 from api.main import app
-
 
 
 @pytest.fixture(autouse=True)
@@ -23,16 +21,18 @@ def modelo_simulado():
     with patch("api.main.carregar_modelo", return_value=modelo):
         yield
 
+
 def test_predict_rejeita_dados_invalidos():
     """Verifica se a API rejeita campos invalidos e ausentes."""
-    with TestClient(app) as client:
-        resposta = client.post(
-            "/predict",
-            json={
-                "gender": "Female",
-                "SeniorCitizen": 5,
-            },
-        )
+    with patch("api.main.salvar_metrica"):
+        with TestClient(app) as client:
+            resposta = client.post(
+                "/predict",
+                json={
+                    "gender": "Female",
+                    "SeniorCitizen": 5,
+                },
+            )
 
     assert resposta.status_code == 422
 
@@ -44,7 +44,7 @@ def test_predict_rejeita_dados_invalidos():
 
 
 def test_predict_retorna_previsao():
-    """Verifica a resposta de uma previsao real de churn."""
+    """Verifica a resposta e a persistencia da previsao de churn."""
     cliente = {
         "gender": "Female",
         "SeniorCitizen": 0,
@@ -67,9 +67,23 @@ def test_predict_retorna_previsao():
         "TotalCharges": 1078.20,
     }
 
-    with TestClient(app) as client:
-        resposta = client.post("/predict", json=cliente)
+    # Testa a previsao e verifica os dados enviados a persistencia.
+    # O mock impede gravacoes reais no Supabase.
+    with patch("api.main.salvar_metrica") as salvar_mock:
+        with TestClient(app) as client:
+            resposta = client.post("/predict", json=cliente)
 
+        salvar_mock.assert_called_once()
+
+        argumentos = salvar_mock.call_args.kwargs
+
+        assert argumentos["endpoint"] == "/predict"
+        assert argumentos["metodo_http"] == "POST"
+        assert argumentos["status_http"] == 200
+        assert argumentos["tempo_resposta_ms"] >= 0
+        assert argumentos["previsao_churn"] is True
+
+    # Verifica o retorno da API.
     assert resposta.status_code == 200
 
     resultado = resposta.json()
@@ -78,18 +92,24 @@ def test_predict_retorna_previsao():
     assert 0 <= resultado["probabilidade_churn"] <= 1
     assert resultado["threshold"] == 0.1656
     assert resultado["churn"] is True
-    with patch.dict(environ, {"METRICS_API_KEY": "chave-teste"}):
-        with TestClient(app) as client:
-            headers = {"X-API-Key": "chave-teste"}
 
-            metricas_antes = client.get(
-                    "/metrics", headers=headers
+    # Verifica se a previsao continua sendo contabilizada
+    # nas metricas em memoria.
+    with patch("api.main.salvar_metrica"):
+        with patch.dict(environ, {"METRICS_API_KEY": "chave-teste"}):
+            with TestClient(app) as client:
+                headers = {"X-API-Key": "chave-teste"}
+
+                metricas_antes = client.get(
+                    "/metrics",
+                    headers=headers,
                 ).json()
 
-            client.post("/predict", json=cliente)
+                client.post("/predict", json=cliente)
 
-            metricas_depois = client.get(
-                    "/metrics", headers=headers
+                metricas_depois = client.get(
+                    "/metrics",
+                    headers=headers,
                 ).json()
 
     total_antes = metricas_antes["previsoes"].get("churn", 0)

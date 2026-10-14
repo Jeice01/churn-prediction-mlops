@@ -92,3 +92,31 @@ def test_metrics_bloqueia_quando_chave_nao_configurada():
 
     assert resposta.status_code == 503
     assert resposta.json()["detail"] == "Monitoramento não configurado."
+
+def test_middleware_registra_metrica_persistente():
+    with patch("api.main.salvar_metrica") as salvar_mock:
+        with TestClient(app) as client:
+            resposta = client.get("/health")
+
+    assert resposta.status_code == 200
+
+    salvar_mock.assert_called_once()
+
+    argumentos = salvar_mock.call_args.kwargs
+
+    assert argumentos["endpoint"] == "/health"
+    assert argumentos["metodo_http"] == "GET"
+    assert argumentos["status_http"] == 200
+    assert argumentos["tempo_resposta_ms"] >= 0
+    assert argumentos["previsao_churn"] is None
+
+
+def test_api_responde_quando_persistencia_falha():
+    """A API continua respondendo se a gravacao no banco falhar."""
+    with patch("api.main.salvar_metrica", return_value=False) as salvar_mock:
+        with TestClient(app) as client:
+            resposta = client.get("/health")
+
+    assert resposta.status_code == 200
+    assert resposta.json()["status"] == "ok"
+    salvar_mock.assert_called_once()

@@ -2,19 +2,16 @@
 
 import os
 import secrets
-
-from fastapi import Header, HTTPException
-
+from contextlib import asynccontextmanager
 from time import perf_counter
 
-from api.monitoring.metrics import metricas
-
-from contextlib import asynccontextmanager
-
 import pandas as pd
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Header, HTTPException, Request
+from starlette.background import BackgroundTasks
 
+from api.database.repository import salvar_metrica
 from api.model import carregar_modelo
+from api.monitoring.metrics import metricas
 from api.schemas import ClienteInput
 
 
@@ -28,25 +25,55 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Churn Prediction API",
     description="API para previsao de cancelamento de clientes.",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
+
 @app.middleware("http")
 async def monitorar_requisicoes(request: Request, call_next):
+    """Registra metricas em memoria e agenda persistencia no PostgreSQL."""
     inicio = perf_counter()
     erro = False
 
     try:
         response = await call_next(request)
-        erro = response.status_code >= 500
+
+        status_http = response.status_code
+        erro = status_http >= 500
+
+        tarefas = BackgroundTasks()
+
+        if response.background is not None:
+            tarefas.add_task(response.background)
+
+        tarefas.add_task(
+            salvar_metrica,
+            endpoint=request.url.path,
+            metodo_http=request.method,
+            status_http=status_http,
+            tempo_resposta_ms=round(
+                (perf_counter() - inicio) * 1000, 2
+            ),
+            previsao_churn=getattr(
+                request.state,
+                "previsao_churn",
+                None,
+            ),
+        )
+
+        response.background = tarefas
+
         return response
+
     except Exception:
         erro = True
         raise
+
     finally:
         duracao = perf_counter() - inicio
         metricas.registrar_requisicao(duracao, erro)
+
 
 @app.get("/health")
 def health():
@@ -67,6 +94,7 @@ def predict(cliente: ClienteInput, request: Request):
     classificacao = int(modelo.predict(dados)[0])
 
     metricas.registrar_previsao(churn=bool(classificacao))
+    request.state.previsao_churn = bool(classificacao)
 
     return {
         "churn": bool(classificacao),
@@ -74,11 +102,12 @@ def predict(cliente: ClienteInput, request: Request):
         "threshold": round(float(modelo.best_threshold_), 4),
     }
 
+
 @app.get("/metrics")
 def consultar_metricas(
     x_api_key: str | None = Header(default=None),
 ):
-    """Retorna as métricas apenas para clientes autorizados."""
+    """Retorna as metricas apenas para clientes autorizados."""
     chave_configurada = os.getenv("METRICS_API_KEY")
 
     if not chave_configurada:
@@ -88,7 +117,8 @@ def consultar_metricas(
         )
 
     if not x_api_key or not secrets.compare_digest(
-        x_api_key, chave_configurada
+        x_api_key,
+        chave_configurada,
     ):
         raise HTTPException(
             status_code=401,
@@ -96,3 +126,20 @@ def consultar_metricas(
         )
 
     return metricas.obter_metricas()
+
+def test_middleware_registra_metrica_persistente():
+    with patch("api.main.salvar_metrica") as salvar_mock:
+        with TestClient(app) as client:
+            resposta = client.get("/health")
+
+    assert resposta.status_code == 200
+
+    salvar_mock.assert_called_once()
+
+    argumentos = salvar_mock.call_args.kwargs
+
+    assert argumentos["endpoint"] == "/health"
+    assert argumentos["metodo_http"] == "GET"
+    assert argumentos["status_http"] == 200
+    assert argumentos["tempo_resposta_ms"] >= 0
+    assert argumentos["previsao_churn"] is None
