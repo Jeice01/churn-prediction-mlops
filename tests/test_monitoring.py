@@ -1,11 +1,18 @@
+
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 
 from api.main import app
 
 
 def test_metrics_retorna_indicadores():
-    with TestClient(app) as client:
-        response = client.get("/metrics")
+    with patch.dict("os.environ", {"METRICS_API_KEY": "chave-teste"}):
+        with TestClient(app) as client:
+            response = client.get(
+                "/metrics",
+                headers={"X-API-Key": "chave-teste"},
+            )
 
     assert response.status_code == 200
 
@@ -17,12 +24,19 @@ def test_metrics_retorna_indicadores():
     assert "previsoes" in dados
 
 def test_metrics_contabiliza_requisicoes():
-    with TestClient(app) as client:
-        antes = client.get("/metrics").json()["total_requisicoes"]
+    with patch.dict("os.environ", {"METRICS_API_KEY": "chave-teste"}):
+        with TestClient(app) as client:
+            headers = {"X-API-Key": "chave-teste"}
 
-        client.get("/health")
+            antes = client.get(
+                "/metrics", headers=headers
+            ).json()["total_requisicoes"]
 
-        depois = client.get("/metrics").json()["total_requisicoes"]
+            client.get("/health")
+
+            depois = client.get(
+                "/metrics", headers=headers
+            ).json()["total_requisicoes"]
 
     assert depois > antes
 
@@ -40,3 +54,33 @@ def test_metrics_contabiliza_previsoes():
 
     assert resultado["previsoes"]["churn"] == 2
     assert resultado["previsoes"]["sem_churn"] == 1
+
+def test_metrics_bloqueia_acesso_sem_chave():
+    with patch.dict("os.environ", {"METRICS_API_KEY": "chave-teste"}):
+        with TestClient(app) as client:
+            resposta = client.get("/metrics")
+
+    assert resposta.status_code == 401
+    assert resposta.json()["detail"] == "Acesso não autorizado."
+
+def test_metrics_bloqueia_chave_incorreta():
+    with patch.dict("os.environ", {"METRICS_API_KEY": "chave-teste"}):
+        with TestClient(app) as client:
+            resposta = client.get(
+                "/metrics",
+                headers={"X-API-Key": "chave-errada"},
+            )
+
+    assert resposta.status_code == 401
+    assert resposta.json()["detail"] == "Acesso não autorizado."
+
+def test_metrics_bloqueia_quando_chave_nao_configurada():
+    with patch.dict("os.environ", {}, clear=True):
+        with TestClient(app) as client:
+            resposta = client.get(
+                "/metrics",
+                headers={"X-API-Key": "qualquer-chave"},
+            )
+
+    assert resposta.status_code == 503
+    assert resposta.json()["detail"] == "Monitoramento não configurado."

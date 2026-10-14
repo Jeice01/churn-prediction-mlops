@@ -1,4 +1,10 @@
 """API de previsao de churn de clientes."""
+
+import os
+import secrets
+
+from fastapi import Header, HTTPException
+
 from time import perf_counter
 
 from api.monitoring.metrics import metricas
@@ -69,6 +75,24 @@ def predict(cliente: ClienteInput, request: Request):
     }
 
 @app.get("/metrics")
-def consultar_metricas():
-    """Retorna os indicadores de monitoramento da API."""
+def consultar_metricas(
+    x_api_key: str | None = Header(default=None),
+):
+    """Retorna as métricas apenas para clientes autorizados."""
+    chave_configurada = os.getenv("METRICS_API_KEY")
+
+    if not chave_configurada:
+        raise HTTPException(
+            status_code=503,
+            detail="Monitoramento não configurado.",
+        )
+
+    if not x_api_key or not secrets.compare_digest(
+        x_api_key, chave_configurada
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Acesso não autorizado.",
+        )
+
     return metricas.obter_metricas()

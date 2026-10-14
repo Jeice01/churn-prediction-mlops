@@ -1,6 +1,7 @@
 """Testes automatizados da API de churn."""
 
 from unittest.mock import MagicMock, patch
+from os import environ
 
 import numpy as np
 import pytest
@@ -77,10 +78,19 @@ def test_predict_retorna_previsao():
     assert 0 <= resultado["probabilidade_churn"] <= 1
     assert resultado["threshold"] == 0.1656
     assert resultado["churn"] is True
-    with TestClient(app) as client:
-        metricas_antes = client.get("/metrics").json()
-        client.post("/predict", json=cliente)
-        metricas_depois = client.get("/metrics").json()
+    with patch.dict(environ, {"METRICS_API_KEY": "chave-teste"}):
+        with TestClient(app) as client:
+            headers = {"X-API-Key": "chave-teste"}
+
+            metricas_antes = client.get(
+                    "/metrics", headers=headers
+                ).json()
+
+            client.post("/predict", json=cliente)
+
+            metricas_depois = client.get(
+                    "/metrics", headers=headers
+                ).json()
 
     total_antes = metricas_antes["previsoes"].get("churn", 0)
     total_depois = metricas_depois["previsoes"].get("churn", 0)
