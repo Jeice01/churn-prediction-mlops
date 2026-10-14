@@ -34,3 +34,6 @@ data/processed/
 mlflow.db
 mlflow.db-shm
 mlflow.db-wal
+
+# Artefatos locais para implantacao
+/deployment/model/

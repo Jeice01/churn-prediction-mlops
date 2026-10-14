@@ -15,5 +15,7 @@ MODEL_URI = os.getenv(
 
 def carregar_modelo():
     """Carrega o modelo treinado e registrado no MLflow."""
-    configurar_mlflow()
+    if MODEL_URI.startswith("models:/"):
+        configurar_mlflow()
+
     return mlflow.sklearn.load_model(MODEL_URI)
