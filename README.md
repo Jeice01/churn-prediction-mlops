@@ -1,152 +1,152 @@
-# Churn Prediction MLOps
+# Churn Prediction MLOps | Orbis Intelligence
 
-**Sistema de previsão de cancelamento de clientes com Machine Learning, API REST e práticas de MLOps.**
+Sistema de previsão de cancelamento de clientes com Machine Learning, API REST, monitoramento de métricas e dashboard de observabilidade.
 
-## Sobre o projeto
+**Projeto de MLOps que integra o ciclo de vida de Machine Learning à operação de uma API em produção.**
 
-Este projeto desenvolve uma solução de Machine Learning para prever a probabilidade de cancelamento de clientes (*customer churn*) de uma empresa de telecomunicações.
+## 1. Visão geral
 
-A solução utiliza o conjunto de dados **IBM Telco Customer Churn** para treinar um modelo de classificação capaz de identificar clientes com maior risco de cancelamento.
+O projeto utiliza o dataset **IBM Telco Customer Churn** para desenvolver um modelo capaz de estimar a probabilidade de cancelamento de clientes de telecomunicações e apoiar estratégias de retenção.
 
-O objetivo é apoiar estratégias de retenção de clientes, permitindo que equipes de negócio identifiquem antecipadamente situações de risco e priorizem ações preventivas.
+A solução contempla preparação e validação dos dados, treinamento, avaliação, rastreamento de experimentos, otimização de threshold, API REST, testes automatizados, Docker, CI/CD, deploy, persistência de métricas e dashboard de observabilidade.
 
-Além do desenvolvimento do modelo preditivo, o projeto contempla práticas de engenharia de Machine Learning, incluindo rastreamento de experimentos, testes automatizados, conteinerização, integração contínua e disponibilização de uma API em produção.
+## 2. Estado atual
 
-**API em produção:** https://churn-prediction-api-0-1-0.onrender.com
+| Componente | Versão de referência | Situação |
+|---|---|---|
+| Modelo preditivo | Regressão Logística | Implementado |
+| API FastAPI | v0.4.0 | Implantada no Render |
+| Persistência PostgreSQL | Integração Supabase | Implementada |
+| Endpoint protegido `/metrics` | API v0.4.0 | Implementado |
+| Orbis Intelligence Dashboard | v0.3 | Implementado localmente |
+| Testes automatizados | Pytest | Implementados |
+| Docker e CI/CD | GitHub Actions | Implementados |
+| Observabilidade avançada | Planejada | Próxima fase |
 
-**Documentação interativa (Swagger):** https://churn-prediction-api-0-1-0.onrender.com/docs
+A implantação pública do dashboard **não** está documentada como concluída.
 
-## Tecnologias utilizadas
+## 3. Links importantes
 
-- **Python 3.11:** desenvolvimento da solução.
-- **Pandas e NumPy:** preparação e processamento dos dados.
-- **Scikit-learn:** treinamento e avaliação do modelo.
-- **MLflow:** rastreamento de experimentos e versionamento de artefatos do modelo.
-- **FastAPI e Uvicorn:** desenvolvimento e execução da API REST.
-- **Pytest e HTTPX:** testes automatizados.
-- **uv:** gerenciamento de dependências.
-- **Docker:** conteinerização da aplicação.
-- **GitHub Actions:** integração contínua e automação da publicação da imagem Docker.
-- **GitHub Container Registry (GHCR):** armazenamento da imagem Docker.
-- **Render:** hospedagem da API em produção.
+| Recurso | Link |
+|---|---|
+| Repositório GitHub | https://github.com/Jeice01/churn-prediction-mlops |
+| API em produção | https://churn-prediction-api-0-1-0.onrender.com |
+| Documentação Swagger | https://churn-prediction-api-0-1-0.onrender.com/docs |
+| Projeto Supabase | https://supabase.com/dashboard/project/onkigkpscmaeodzbvgio |
 
-## Arquitetura da solução
+Documentos complementares:
 
-O projeto foi desenvolvido com uma arquitetura que integra o ciclo de vida do Machine Learning à disponibilização do modelo em produção.
+- [Roadmap de desenvolvimento](ROADMAP.md)
+- [Instruções para agentes de IA](AGENTS.md)
 
-**Fluxo da solução:**
+## 4. Tecnologias
+
+- **Machine Learning:** Python 3.11, Pandas, NumPy, Scikit-learn e MLflow.
+- **API e backend:** FastAPI, Uvicorn, Pydantic, PostgreSQL e Supabase.
+- **Dashboard:** Streamlit, Plotly e Pandas.
+- **Engenharia e infraestrutura:** uv, Pytest, HTTPX, Docker, GitHub Actions, GHCR, Render e GitHub Codespaces.
+
+## 5. Arquitetura
+
+### Fluxo de Machine Learning
 
 ```text
-Dataset IBM Telco Customer Churn
-              ↓
-Preparação e validação dos dados
-              ↓
-Pré-processamento das variáveis
-              ↓
-Treinamento — Logistic Regression
-              ↓
-Otimização do threshold — F2-score
-              ↓
+IBM Telco Customer Churn
+          |
+          v
+Preparação e validação
+          |
+          v
+Pré-processamento
+          |
+          v
+Treinamento e otimização do threshold
+          |
+          v
 Avaliação e rastreamento — MLflow
-              ↓
-Empacotamento do modelo
-              ↓
-Docker + GitHub Container Registry
-              ↓
-Deploy no Render
-              ↓
-API REST — FastAPI
-              ↓
-Previsão de cancelamento
+          |
+          v
+Artefato do modelo
+          |
+          v
+Docker / GitHub Container Registry
+          |
+          v
+Render / FastAPI
+          |
+          v
+POST /predict
 ```
 
-### Modelo preditivo
+### Fluxo de observabilidade
 
-O modelo utiliza **Regressão Logística**, com validação cruzada estratificada em cinco divisões.
+```text
+Cliente HTTP
+     |
+     v
+FastAPI / Middleware
+     |                  \
+     |                   -> Métricas em memória
+     v
+Persistência em segundo plano
+     |
+     v
+Supabase PostgreSQL
+     |
+     v
+Consultas SQL
+     |
+     v
+Streamlit + Plotly
+     |
+     v
+Orbis Intelligence Dashboard
+```
 
-O limite de classificação (*threshold*) foi otimizado utilizando o **F2-score**, que atribui maior peso ao recall. Essa estratégia busca identificar uma proporção maior dos clientes que efetivamente cancelam seus serviços.
+O dashboard consulta diretamente o PostgreSQL e **não depende** do endpoint `/metrics` para obter suas séries temporais.
 
-O conjunto de dados foi dividido em 80% para treinamento e 20% para teste, preservando a proporção das classes.
+## 6. Modelo preditivo
 
-### Resultados do modelo
+O modelo de referência utiliza **Regressão Logística**, divisão estratificada de treinamento e teste, validação cruzada estratificada e otimização do threshold pelo **F2-score**, que atribui maior importância ao recall.
+
+### Resultados da avaliação
 
 | Indicador | Resultado aproximado |
-|---|---|
+|---|---:|
 | Recall | 90,11% |
 | ROC AUC | 0,842 |
 | Threshold otimizado | 0,1656 |
 
-Os resultados correspondem à avaliação realizada durante o desenvolvimento do modelo.
-## Testes automatizados e CI/CD
+Esses resultados correspondem à avaliação durante o desenvolvimento e **não representam métricas continuamente medidas em produção**.
 
-O projeto utiliza testes automatizados com **Pytest** e **HTTPX** para verificar o funcionamento dos componentes da solução.
+## 7. API REST
 
-A integração contínua (CI) é realizada pelo **GitHub Actions**.
+**URL:** https://churn-prediction-api-0-1-0.onrender.com
 
-O workflow de testes é executado automaticamente quando há:
+| Método | Endpoint | Finalidade |
+|---|---|---|
+| GET | `/health` | Verificação de funcionamento |
+| POST | `/predict` | Previsão de churn |
+| GET | `/metrics` | Consulta protegida de métricas históricas |
 
-- Push para a branch `main`.
-- Criação ou atualização de Pull Requests direcionados à branch `main`.
-
-O pipeline realiza as seguintes etapas:
-
-1. Obtém o código-fonte do repositório.
-2. Configura o ambiente Python 3.11.
-3. Instala as dependências com `uv`.
-4. Executa os testes automatizados utilizando Pytest.
-
-Para executar os testes localmente:
+### Verificar funcionamento
 
 ```bash
-uv run python -m pytest tests/ -v
+curl https://churn-prediction-api-0-1-0.onrender.com/health
 ```
 
-### Conteinerização e publicação
+Resposta esperada:
 
-A aplicação é empacotada em uma imagem **Docker**, permitindo sua execução em ambientes compatíveis com contêineres.
-
-O projeto também possui um workflow para construção e publicação da imagem no **GitHub Container Registry (GHCR)**.
-
-A versão `0.1.0` utiliza um artefato de modelo disponibilizado no GitHub Releases.
-
-**Imagem publicada:**
-
-```text
-ghcr.io/jeice01/churn-prediction-api:0.1.0
+```json
+{
+  "status": "ok",
+  "service": "churn-prediction-api"
+}
 ```
 
-### Implantação em produção
+### Exemplo de previsão
 
-A API está implantada no **Render**, utilizando a imagem Docker publicada no GHCR.
-
-A aplicação disponibiliza dois endpoints principais:
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| GET | `/health` | Verifica o funcionamento da API |
-| POST | `/predict` | Retorna a previsão de cancelamento de um cliente |
-
-A documentação interativa pode ser acessada em:
-
-https://churn-prediction-api-0-1-0.onrender.com/docs
-
-**Observação:** a hospedagem utiliza o plano gratuito do Render, portanto a primeira requisição após um período de inatividade pode apresentar maior tempo de resposta.
-
-## Exemplo de utilização da API
-
-A API recebe os dados de um cliente e retorna a previsão de cancelamento, a probabilidade estimada e o limite de classificação utilizado pelo modelo.
-
-### Requisição
-
-**Método:** `POST`
-
-**Endpoint:**
-
-```text
-https://churn-prediction-api-0-1-0.onrender.com/predict
-```
-
-**Exemplo de JSON:**
+Requisição `POST /predict`:
 
 ```json
 {
@@ -172,28 +172,177 @@ https://churn-prediction-api-0-1-0.onrender.com/predict
 }
 ```
 
-### Resposta da API
+Exemplo de resposta observada em uma previsão de produção (os resultados dependem da entrada):
 
 ```json
 {
   "churn": true,
-  "probabilidade_churn": 0.6914,
+  "probabilidade_churn": 0.7298,
   "threshold": 0.1656
 }
 ```
 
-### Interpretação do resultado
+A probabilidade é uma estimativa do modelo, não uma certeza de cancelamento.
 
-Para esse exemplo, o modelo estimou uma probabilidade de cancelamento de aproximadamente **69,14%**.
+### Endpoint protegido de métricas
 
-Como essa probabilidade supera o threshold otimizado de aproximadamente **16,56%**, o cliente foi classificado como alguém com risco de cancelamento (`churn: true`).
+O endpoint `GET /metrics` exige o cabeçalho `X-API-Key`, validado contra a variável de ambiente `METRICS_API_KEY`. Retorna HTTP 503 se a chave não estiver configurada e HTTP 401 se a autenticação falhar.
 
-A classificação pode apoiar a priorização de ações de retenção. A probabilidade representa uma estimativa do modelo, não uma certeza de cancelamento.
+Nunca compartilhar nem versionar a chave.
 
-### Testar a API
+## 8. Monitoramento e persistência
 
-É possível executar a previsão diretamente pela documentação interativa do FastAPI:
+A API possui middleware para registrar métricas em memória e agendar sua persistência em segundo plano no Supabase PostgreSQL.
 
-https://churn-prediction-api-0-1-0.onrender.com/docs
+**Tabela:** `public.api_metricas`.
 
-Acesse o endpoint `POST /predict`, selecione **Try it out**, informe os dados do cliente e clique em **Execute**.
+| Campo | Descrição |
+|---|---|
+| `id` | Identificador |
+| `criado_em` | Data e hora |
+| `endpoint` | Caminho da requisição |
+| `metodo_http` | Método HTTP |
+| `status_http` | Código de resposta |
+| `tempo_resposta_ms` | Tempo de resposta em milissegundos |
+| `previsao_churn` | Classificação de churn, quando aplicável |
+
+A resposta HTTP pode ser enviada antes da conclusão da gravação no banco. Os registros podem incluir chamadas de desenvolvimento e produção.
+
+## 9. Orbis Intelligence Dashboard
+
+Dashboard com identidade visual da **Orbis Conect**, desenvolvido em Streamlit e Plotly. Versão de referência: **v0.3**.
+
+### Páginas
+
+- **Visão Geral:** requisições, erros, latência média, churn previsto e gráficos diários.
+- **Monitoramento da API:** evolução de requisições, erros HTTP e latência média.
+- **Inteligência de Churn:** volume de previsões e classificações positivas de churn.
+
+### Filtros e atualização
+
+- Últimos 7 dias.
+- Últimos 15 dias.
+- Últimos 30 dias.
+- Todo o histórico.
+
+As consultas agrupam os dados no fuso `America/Sao_Paulo`. O cache tem duração de 60 segundos.
+
+### Executar localmente
+
+```bash
+uv run --group dashboard streamlit run dashboard/app.py --server.address 0.0.0.0 --server.port 8501
+```
+
+É necessária uma configuração válida de `DATABASE_URL`. O dashboard ainda não deve ser considerado uma aplicação pública com autenticação implementada.
+
+## 10. Estrutura do repositório
+
+```text
+churn-prediction-mlops/
+├── .github/workflows/
+│   ├── docker.yml
+│   └── tests.yml
+├── api/
+│   ├── database/
+│   │   ├── connection.py
+│   │   ├── dashboard_queries.py
+│   │   ├── queries.py
+│   │   └── repository.py
+│   ├── monitoring/metrics.py
+│   ├── main.py
+│   ├── model.py
+│   └── schemas.py
+├── dashboard/
+│   ├── assets/orbis-logo.png
+│   └── app.py
+├── src/
+│   ├── models/
+│   │   ├── preprocessing.py
+│   │   ├── split_data.py
+│   │   ├── train.py
+│   │   └── tune_threshold.py
+│   ├── tracking/config.py
+│   ├── data_quality.py
+│   └── prepare_data.py
+├── tests/
+│   ├── test_api.py
+│   ├── test_data_quality.py
+│   ├── test_monitoring.py
+│   ├── test_prepare_data.py
+│   ├── test_queries.py
+│   └── test_repository.py
+├── Dockerfile
+├── pyproject.toml
+├── uv.lock
+├── README.md
+├── ROADMAP.md
+└── AGENTS.md
+```
+
+## 11. Desenvolvimento e testes
+
+Ambiente principal: GitHub Codespaces, Python 3.11 e gerenciador de dependências `uv`.
+
+### Instalar dependências
+
+```bash
+uv sync --group dashboard
+```
+
+### Executar testes
+
+```bash
+uv run python -m pytest tests/ -v
+```
+
+### Verificar alterações e último commit
+
+```bash
+git status --short
+git log -1 --oneline
+```
+
+## 12. Docker e CI/CD
+
+O projeto possui `Dockerfile` e workflows versionados em `.github/workflows/tests.yml` e `.github/workflows/docker.yml`.
+
+A imagem Docker é publicada no **GitHub Container Registry** e a API é hospedada no **Render**. O histórico do projeto contém versões anteriores; antes de referenciar uma tag como atual, conferir o workflow e a imagem efetivamente implantada.
+
+Antes de uma nova publicação, verificar testes, imagem, variáveis de ambiente, compatibilidade do modelo, endpoints, persistência e segurança. Um `git push` não é, por si só, comprovação de deploy.
+
+## 13. Segurança
+
+Variáveis de ambiente conhecidas:
+
+| Variável | Finalidade |
+|---|---|
+| `DATABASE_URL` | Conexão PostgreSQL |
+| `METRICS_API_KEY` | Autorização do endpoint `/metrics` |
+
+- Não versionar `.env`.
+- Não expor senhas, tokens ou strings de conexão.
+- Não registrar credenciais em logs ou documentação.
+- Não disponibilizar o dashboard publicamente sem revisar autenticação e autorização.
+- Validar alterações de banco antes de aplicá-las.
+
+## 14. Roadmap
+
+Próximas prioridades: taxa de erros HTTP, separação entre erros 4xx e 5xx, latência P95, taxa de churn previsto, testes dos indicadores, monitoramento de drift, alertas e evolução do ciclo MLOps.
+
+Consulte o planejamento detalhado em [ROADMAP.md](ROADMAP.md).
+
+## 15. Continuidade com agentes de IA
+
+O arquivo [AGENTS.md](AGENTS.md) reúne contexto técnico, decisões, links, comandos, regras de segurança e procedimentos para retomar o projeto.
+
+O desenvolvimento segue o método incremental: **uma etapa por vez, com validação antes de avançar**. Ao substituir arquivos de código, apresentar o arquivo completo atualizado; preservar funcionalidades existentes, executar testes e registrar commits descritivos.
+
+## 16. Identidade do projeto
+
+**Orbis Intelligence — MLOps Dashboard**
+
+Orbis Conect — *Automatize. Conecte. Evolua.*
+
+---
+
+Documentação de referência: **14/10/2026**. API **v0.4.0**; dashboard **v0.3**.
