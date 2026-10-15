@@ -4,8 +4,17 @@
 from api.database.connection import conectar_banco
 
 
-def consultar_metricas_diarias() -> list[dict]:
-    """Consulta a evolução diária das métricas armazenadas no Supabase."""
+def consultar_metricas_diarias(dias: int | None = None) -> list[dict]:
+    """
+    Consulta a evolução diária das métricas armazenadas no Supabase.
+
+    Args:
+        dias: quantidade de dias do período, incluindo hoje.
+              None consulta todo o histórico.
+    """
+
+    if dias is not None and dias not in (7, 15, 30):
+        raise ValueError("Período inválido. Utilize 7, 15, 30 ou None.")
 
     sql = """
         SELECT
@@ -25,13 +34,21 @@ def consultar_metricas_diarias() -> list[dict]:
                   AND previsao_churn = TRUE
             ) AS churn
         FROM public.api_metricas
+        WHERE (
+            %(dias)s::integer IS NULL
+            OR (criado_em AT TIME ZONE 'America/Sao_Paulo')::date
+               >= (
+                   (NOW() AT TIME ZONE 'America/Sao_Paulo')::date
+                   - (%(dias)s::integer - 1)
+               )
+        )
         GROUP BY 1
         ORDER BY 1
     """
 
     with conectar_banco() as conexao:
         with conexao.cursor() as cursor:
-            cursor.execute(sql)
+            cursor.execute(sql, {"dias": dias})
             registros = cursor.fetchall()
 
     return [

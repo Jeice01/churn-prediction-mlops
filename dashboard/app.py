@@ -8,18 +8,15 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-# Localização dos arquivos do projeto
 RAIZ_PROJETO = Path(__file__).resolve().parent.parent
 LOGO = Path(__file__).resolve().parent / "assets" / "orbis-logo.png"
 
 if str(RAIZ_PROJETO) not in sys.path:
     sys.path.insert(0, str(RAIZ_PROJETO))
 
-from api.database.queries import consultar_indicadores_historicos
 from api.database.dashboard_queries import consultar_metricas_diarias
 
 
-# Configuração da página
 st.set_page_config(
     page_title="Orbis Intelligence | MLOps",
     page_icon=str(LOGO) if LOGO.exists() else "📊",
@@ -85,7 +82,7 @@ st.markdown(
 )
 
 
-# Menu lateral
+# Navegação lateral
 with st.sidebar:
     if LOGO.exists():
         st.image(str(LOGO), use_container_width=True)
@@ -105,7 +102,7 @@ with st.sidebar:
 
     st.divider()
     st.caption("Orbis Intelligence")
-    st.caption("MLOps Dashboard | v0.2")
+    st.caption("MLOps Dashboard | v0.3")
 
 
 # Cabeçalho
@@ -124,20 +121,41 @@ st.markdown(
 )
 
 
-# Consultas ao Supabase
-@st.cache_data(ttl=60, show_spinner=False)
-def carregar_indicadores():
-    return consultar_indicadores_historicos()
+# Filtro interativo
+opcoes_periodo = {
+    "Últimos 7 dias": 7,
+    "Últimos 15 dias": 15,
+    "Últimos 30 dias": 30,
+    "Todo o histórico": None,
+}
+
+coluna_filtro, coluna_info = st.columns([1, 3])
+
+with coluna_filtro:
+    periodo_selecionado = st.selectbox(
+        "Período de análise",
+        options=list(opcoes_periodo.keys()),
+        index=3,
+    )
+
+dias = opcoes_periodo[periodo_selecionado]
+
+with coluna_info:
+    st.write("")
+    st.caption(
+        f"Exibindo: {periodo_selecionado} | "
+        "Dados agrupados no horário de Brasília"
+    )
 
 
+# Consulta filtrada ao Supabase
 @st.cache_data(ttl=60, show_spinner=False)
-def carregar_metricas_diarias():
-    return pd.DataFrame(consultar_metricas_diarias())
+def carregar_metricas_diarias(periodo):
+    return pd.DataFrame(consultar_metricas_diarias(periodo))
 
 
 try:
-    indicadores = carregar_indicadores()
-    dados = carregar_metricas_diarias()
+    dados = carregar_metricas_diarias(dias)
 
     if not dados.empty:
         dados["dia"] = pd.to_datetime(dados["dia"])
@@ -145,13 +163,41 @@ try:
 
 except Exception:
     st.error(
-        "Não foi possível carregar os dados do Supabase. "
-        "Verifique a conexão com o banco de dados."
+        "Não foi possível consultar os dados do Supabase. "
+        "Verifique a conexão com o banco."
     )
     st.stop()
 
 
-# Formatação brasileira
+# Indicadores calculados sobre o período selecionado
+if dados.empty:
+    indicadores = {
+        "total_requisicoes": 0,
+        "total_erros_http": 0,
+        "tempo_medio_ms": 0.0,
+        "total_previsoes": 0,
+        "total_churn_previsto": 0,
+    }
+else:
+    total_requisicoes = int(dados["requisicoes"].sum())
+
+    # Média ponderada pelo volume de requisições de cada dia.
+    tempo_medio = (
+        (dados["latencia_ms"] * dados["requisicoes"]).sum()
+        / total_requisicoes
+        if total_requisicoes > 0
+        else 0.0
+    )
+
+    indicadores = {
+        "total_requisicoes": total_requisicoes,
+        "total_erros_http": int(dados["erros"].sum()),
+        "tempo_medio_ms": float(tempo_medio),
+        "total_previsoes": int(dados["previsoes"].sum()),
+        "total_churn_previsto": int(dados["churn"].sum()),
+    }
+
+
 def formatar_inteiro(valor):
     return f"{valor:,}".replace(",", ".")
 
@@ -165,7 +211,6 @@ def formatar_decimal(valor):
     )
 
 
-# Cores institucionais
 CORES = {
     "azul": "#4A90D9",
     "laranja": "#F58220",
@@ -197,7 +242,7 @@ def estilizar_grafico(figura):
 
 def exibir_grafico(coluna, titulo, cor, eixo_y):
     if dados.empty:
-        st.info("Ainda não existem registros para exibir o gráfico.")
+        st.info("Não existem registros no período selecionado.")
         return
 
     figura = px.bar(
@@ -349,9 +394,9 @@ else:
 st.divider()
 
 st.caption(
-    "Indicadores históricos do Supabase • "
-    "Agrupamento diário no horário de Brasília • "
-    "Cache de 60 segundos"
+    f"Período: {periodo_selecionado} • "
+    "Fonte: Supabase PostgreSQL • "
+    "Cache: 60 segundos"
 )
 
 st.caption(
